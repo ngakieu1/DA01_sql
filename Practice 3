@@ -1,0 +1,75 @@
+Bai 1:
+select
+Name
+from STUDENTS 
+where Marks > 75
+order by (right (Name, 3)) asc, ID asc
+
+Bai 2:
+select
+user_id,
+concat(upper(left(name, 1)), lower(right(name, (length(name))- 1))) as name
+from Users
+
+Bai 3:
+SELECT 
+manufacturer,
+--left(sum(total_sales), length(left(sum(total_sales), position ('.' in sum(total_sales))  - 1)) - 6)
+concat('$', round(1.0 * (sum(total_sales)/1000000) :: decimal, 0),'million') as sale
+FROM pharmacy_sales
+group by manufacturer
+order by manufacturer asc 
+
+Bai 4:
+SELECT 
+extract(month from submit_date) as mth,
+product_id as product,
+round(avg(stars), 2) as avg_stars
+FROM reviews
+group by extract(month from submit_date), product_id
+order by extract(month from submit_date), product_id
+
+Bai 5:
+SELECT 
+sender_id,
+count(content) as message_count
+FROM messages
+where extract(month from sent_date) = '08' and extract(year from sent_date) = '2022' 
+group by sender_id
+order by count(content) desc
+limit 2
+
+Bai 6:
+select
+tweet_id
+from Tweets
+where length(content) > 15
+
+Bai 7: /Minh khong hieu bai nay lam/
+select
+activity_date as day,
+count (user_id) as active_users,
+--count(distinct session_id)
+from Activity
+where count(distinct session_id) >= 1, activity_date between '2019-06-27' and '2019-07-27'
+group by user_id
+
+Bai 8:
+select
+count (id) as employees hired
+from employees
+where extract (yyyy-mm-dd from joining_date) >= '2022-01-01' and extract (yyyy-mm-dd from joining_date) < '2022-08-01'
+
+Bai 9:
+select 
+position('a' in first_name)
+from worker
+where first_name = 'Amitah'
+
+Bai 10:
+select
+variety,
+substring (title from position ('2' in title) for 4)
+from winemag_p2
+where title like '%2%'
+where title like '%2%' and country = 'Macedonia'

@@ -1,0 +1,72 @@
+Bai 1:
+select COUNTRY.Continent,
+floor(avg(CITY.POPULATION))
+from CITY
+inner join COUNTRY
+on CITY.COUNTRYCODE = COUNTRY.CODE
+group by COUNTRY.Continent
+
+Bai 2:
+SELECT 
+round(1.0 * sum(CASE
+when texts.signup_action = 'Confirmed' then 1 else 0
+end) / count(texts.signup_action), 2)
+from emails
+inner join texts
+on emails.email_id = texts.email_id
+
+Bai 3:
+SELECT 
+a_b.age_bucket,
+round(100.0* sum(CASE when a_c.activity_type = 'send' then a_c.time_spent end) :: decimal/sum(case when a_c.activity_type in ('send', 'open') then time_spent end)::decimal,2) as send_perc,
+round(100.0* sum(CASE when a_c.activity_type = 'open' then a_c.time_spent end) :: decimal/sum(case when a_c.activity_type in ('send', 'open') then time_spent end)::decimal,2) as open_perc
+FROM age_breakdown as a_b
+inner join activities as a_c
+on a_b.user_id = a_c.user_id
+where a_c.activity_type in ('open', 'send')
+group by a_b.age_bucket
+
+Bai 4:
+SELECT 
+c_u.customer_id
+--c_u.product_id
+FROM customer_contracts as c_u
+left join products 
+on c_u.product_id = products.product_id
+where left(products.product_name, 5) = 'Azure'
+group by 
+--c_u.product_id
+c_u.customer_id
+having count(distinct(products.product_category))=(select count(distinct(product_category)) from products)
+
+Bai 5:
+select
+e1.employee_id as employee_id,
+e1.name as name,
+count(e2.reports_to) as reports_count,
+round(avg(e2.age), 0) as average_age
+from Employees as e1
+left join Employees as e2
+on e1.employee_id = e2.reports_to
+group by e1.employee_id
+having count(e2.reports_to) >= 1
+
+Bai 6:
+select
+p.product_name as product_name,
+sum(o.unit) as unit
+from Products as p
+left join Orders as o
+on p.product_id = o.product_id
+where o.order_date between '2020-02-01' and '2020-02-29'
+group by p.product_id
+having sum(o.unit) >= 100
+
+Bai 7:
+SELECT 
+pages.page_id as page_id
+FROM pages 
+left join page_likes as pl 
+on pages.page_id = pl.page_id
+where pl.user_id is NULL
+group by pages.page_id

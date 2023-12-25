@@ -1,0 +1,130 @@
+select * from SALES_DATASET_RFM_PRJ;
+--yeu cau 1
+alter table SALES_DATASET_RFM_PRJ
+alter column ordernumber type numeric using (trim(ordernumber)::numeric);
+alter table SALES_DATASET_RFM_PRJ
+alter column quantityordered type numeric using (trim(quantityordered)::numeric);
+alter table SALES_DATASET_RFM_PRJ
+alter column priceeach type decimal using (trim(priceeach)::decimal);
+alter table SALES_DATASET_RFM_PRJ
+alter column orderlinenumber type int using (trim(orderlinenumber)::int);
+alter table SALES_DATASET_RFM_PRJ
+alter column sales type decimal using (trim(sales)::decimal);
+alter table SALES_DATASET_RFM_PRJ
+alter column orderdate type timestamp using (trim(orderdate)::timestamp);
+alter table SALES_DATASET_RFM_PRJ
+alter column msrp type int using (trim(msrp)::int);
+--yeu cau 2
+SELECT * FROM SALES_DATASET_RFM_PRJ WHERE ordernumber 
+IS NULL
+and quantityordered is NULL
+and priceeach is NULL
+and orderlinenumber is NULL
+and sales is NULL
+and orderdate is NULL
+--yeu cau 3
+alter table SALES_DATASET_RFM_PRJ
+add column contactlastname varchar(20),
+add column contactfirstname varchar(20);
+update SALES_DATASET_RFM_PRJ
+set contactlastname = upper(left(contactfullname, 1))||
+lower(right(left(contactfullname, position('-' in contactfullname) -1), position('-' in contactfullname) -2))
+update SALES_DATASET_RFM_PRJ
+set contactfirstname = upper(right(left(contactfullname, position('-' in contactfullname) +1), 1))||
+lower(right(contactfullname, length(contactfullname) - position('-' in contactfullname) -1))
+/*
+insert into SALES_DATASET_RFM_PRJ (contactlastname, contactfirstname)
+values (upper(left(contactfullname, 1))||
+lower(right(left(contactfullname, position('-' in contactfullname) -1), position('-' in contactfullname) -2)),
+upper(right(left(contactfullname, position('-' in contactfullname) +1), 1))||
+lower(right(contactfullname, length(contactfullname) - position('-' in contactfullname) -1)))
+*/
+select *,
+upper(left(contactfullname, 1))||
+lower(right(left(contactfullname, position('-' in contactfullname) -1), position('-' in contactfullname) -2)) as contactlastname,
+upper(right(left(contactfullname, position('-' in contactfullname) +1), 1))||
+lower(right(contactfullname, length(contactfullname) - position('-' in contactfullname) -1)) as contactfirstname
+from SALES_DATASET_RFM_PRJ;
+--yeu cau 4
+alter table SALES_DATASET_RFM_PRJ
+add column qtr_id numeric (1),
+add column month_id numeric (2),
+add column year_id numeric (4);
+/*insert into SALES_DATASET_RFM_PRJ (qtr_id, month_id, year_id )
+values (case 
+	when extract(month from orderdate) in (1, 2, 3) then '1'
+	when extract(month from orderdate) in (4, 5, 6) then '2'
+	when extract(month from orderdate) in (7, 8, 9) then '3'
+	when extract(month from orderdate) in (10, 11, 12) then '4',
+	extract(month from orderdate),
+	extract(year from orderdate))
+*/
+update SALES_DATASET_RFM_PRJ
+set qtr_id = '1'
+where extract(month from orderdate) in (1, 2, 3)
+update SALES_DATASET_RFM_PRJ
+set qtr_id = '2'
+where extract(month from orderdate) in (4, 5, 6)
+update SALES_DATASET_RFM_PRJ
+set qtr_id = '3'
+where extract(month from orderdate) in (7, 8, 9)
+update SALES_DATASET_RFM_PRJ
+set qtr_id = '4'
+where extract(month from orderdate) in (10, 11, 12)
+update SALES_DATASET_RFM_PRJ
+set month_id = extract(month from orderdate)
+update SALES_DATASET_RFM_PRJ
+set year_id = extract(year from orderdate)
+/*select *,
+case 
+	when extract(month from orderdate) in (1, 2, 3) then '1'
+	when extract(month from orderdate) in (4, 5, 6) then '2'
+	when extract(month from orderdate) in (7, 8, 9) then '3'
+	when extract(month from orderdate) in (10, 11, 12) then '4'
+end as qtr_id,
+ extract(month from orderdate) as month_id,
+ extract(year from orderdate) as year_id
+from SALES_DATASET_RFM_PRJ;
+*/
+--yc5
+/*
+with a_ as(
+select 
+	  percentile_cont(0.25) within group(order by quantityordered) - 1.5*(
+	  percentile_cont(0.75) within group(order by quantityordered) - percentile_cont(0.25) within group(order by quantityordered)) as min_value,
+	  percentile_cont(0.75) within group(order by quantityordered) + 1.5*(
+	  percentile_cont(0.75) within group(order by quantityordered) - percentile_cont(0.25) within group(order by quantityordered)) as max_value
+	 from SALES_DATASET_RFM_PRJ)
+
+select s_.*
+from SALES_DATASET_RFM_PRJ as s_
+join a_
+on a_.quantityordered = s_.quantityordered
+where s_.quantityordered > (select max_value from a_) or s_.quantityordered < (select min_value from a_)
+*/
+
+with min_max_value as(
+select Q1-1.5*IQR as min_value,
+Q3+1,5*IQR as max_value
+from (
+select 
+	percentile_cont(0.25) within group(order by quantityordered) as Q1,
+	percentile_cont(0.75) within group(order by quantityordered) as Q3,
+	percentile_cont(0.75) within group(order by quantityordered) - percentile_cont(0.25) within group(order by quantityordered) as IQR
+	from SALES_DATASET_RFM_PRJ) as a_ ), 
+twt_outlier as(
+select quantityordered
+from SALES_DATASET_RFM_PRJ
+where quantityordered < (select min_value from min_max_value) or
+	  quantityordered > (select max_value from min_max_value)
+)
+select * from SALES_DATASET_RFM_PRJ
+where quantityordered < (select min_value from min_max_value) or
+	  quantityordered > (select max_value from min_max_value)
+
+
+update SALES_DATASET_RFM_PRJ
+set quantityordered = select avg(quantityordered)
+from SALES_DATASET_RFM_PRJ
+where quantityordered in (select quantityordered from twt_outlier)
+

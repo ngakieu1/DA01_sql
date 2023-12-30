@@ -76,9 +76,9 @@ month_year, product_id, product_name, cost, sales, profit,
 from tb2_4
 where stttop5 <=5 
 order by month_year 
-*/
---II.5 ????
-/*
+
+--II.5 
+
 with tb2_5 as(
 select format_date('%Y-%m-%d', created_at) as dates, 
 product_retail_price

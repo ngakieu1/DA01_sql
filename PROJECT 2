@@ -63,8 +63,8 @@ case when age > avg(age) then 'youngest'
 end as tag_1
 from tb2_3loc
 
---II.4 dung products table
-/*
+--II.4 
+
 with tb2_4 as(
 select product_id, product_name, format_date('%Y-%m', created_at) as month_year, cost, product_retail_price as sales,
   product_retail_price - cost as profit,
@@ -91,7 +91,7 @@ sum(product_retail_price) as revenue
 from tb2_5 
 group by 1
 order by 1
-*/
+
 --III.1
 /*
 with tb3_1_1 as(

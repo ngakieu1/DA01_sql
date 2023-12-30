@@ -1,0 +1,133 @@
+with month_y as (
+  select user_id, order_id, status, sale_price,
+format_date('%Y-%m', created_at) as month_year
+from bigquery-public-data.thelook_ecommerce.order_items
+where format_date('%Y-%m', created_at) >= '2019-01' and '2022-04'>= format_date('%Y-%m', created_at)
+)
+--II.2
+
+select 
+month_year, count(distinct(user_id)) as distinct_users,
+sum(sale_price)/count(order_id) as average_order_value
+from month_y
+where status = 'Complete'
+group by month_year
+order by month_year
+
+--II.1
+
+select
+month_year,
+sum(user_id) as total_user,
+sum(order_id) as total_order
+from month_y
+where status = 'Complete'
+group by month_year
+order by month_year
+
+--II.3
+
+with tb2_3 as (
+select id, first_name, last_name, gender, age,
+format_date('%Y-%m', created_at) as m_y
+from bigquery-public-data.thelook_ecommerce.users
+where format_date('%Y-%m', created_at) >= '2019-01' and '2022-04'>= format_date('%Y-%m', created_at)
+),
+tb2_3f as(
+select first_name, last_name, gender, age,
+row_number() over(order by age) as fyoungest,
+row_number() over(order by age desc) as foldest
+from tb2_3
+where gender = 'F'
+),
+tb2_3m as(
+select first_name, last_name, gender, age,
+row_number() over(order by age) as myoungest,
+row_number() over(order by age desc) as moldest
+from tb2_3
+where gender = 'M'),
+tb2_3loc as(
+select
+first_name, last_name, gender, age
+from tb2_3f
+where fyoungest = 1 and foldest = 1
+union all
+select 
+first_name, last_name, gender, age
+from tb2_3m
+where myoungest = 1 and moldest = 1)
+select
+first_name, last_name, gender, age, avg(age),
+case when age > avg(age) then 'youngest'
+     when age < avg(age) then 'oldest'
+end as tag_1
+from tb2_3loc
+
+--II.4 dung products table
+/*
+with tb2_4 as(
+select product_id, product_name, format_date('%Y-%m', created_at) as month_year, cost, product_retail_price as sales,
+  product_retail_price - cost as profit,
+  dense_rank() over(partition by format_date('%Y-%m', created_at) order by product_retail_price - cost desc) as stttop5
+  from bigquery-public-data.thelook_ecommerce.inventory_items
+)
+select
+month_year, product_id, product_name, cost, sales, profit,
+from tb2_4
+where stttop5 <=5 
+order by month_year 
+*/
+--II.5 ????
+/*
+with tb2_5 as(
+select format_date('%Y-%m-%d', created_at) as dates, 
+product_retail_price
+from bigquery-public-data.thelook_ecommerce.inventory_items
+where format_date('%Y-%m-%e', created_at) >= '2022-01-15' and '2022-04-15' >= format_date('%Y-%m-%e', created_at)
+)
+select
+dates,
+sum(product_retail_price) as revenue 
+from tb2_5 
+group by 1
+order by 1
+*/
+--III.1
+/*
+with tb3_1_1 as(
+  select order_id, user_id, format_date('%Y-%m', created_at) as Month,
+  extract(year from created_at) as Year
+  from bigquery-public-data.thelook_ecommerce.orders
+),
+tb3_1_2 as(
+  select id as product_id, category as Product_category
+  from bigquery-public-data.thelook_ecommerce.products
+),
+tb3_1_3 as(
+  select format_date('%Y-%m', created_at) as m_y, product_id, order_id
+  from bigquery-public-data.thelook_ecommerce.order_items
+  group by 1
+),
+tb3_1_4 as(
+  select sum(cost) as Total_cost, id as product_id from (select cost
+  from bigquery-public-data.thelook_ecommerce.products as a
+  join tb3_1_3 as b
+  on a.product_id = b.product_id) as t
+),
+tb3_1_5 as(
+  select sum(sale_price) as TPV, count(order_id) as TPO, order_id, product_id from (select sale_price, order_id, product_id
+  from bigquery-public-data.thelook_ecommerce.order_items as a
+  join tb3_1_3 as b
+  on a.product_id = b.product_id and a.order_id = b.order_id) as t1
+), 
+tb3_1_6 as(
+  select round(100.00* (lead(TPV, 1, 0) over(order by format_date('%Y-%m', created_at)) - TPV)/TPV, 2)||'%' as Revenue_growth,
+  round(100.00* (lead(TPO, 1, 0) over(order by format_date('%Y-%m', created_at)) - TPO)/TPO, 2)||'%' as Order_growth
+  from tb3_1_5
+),
+tb3_1_7 as(
+  select Total_profit, Total_profit/Total_cost as Profit_to_cost_ratio from(select a.TPV - b.Total_cost as Total_profit
+  from (select a.TPV, b.Total_cost
+  from tb3_1_5 as a
+  join tb3_1_4 as b) as t2) as t3)
+*/

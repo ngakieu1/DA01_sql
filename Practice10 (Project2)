@@ -1,0 +1,50 @@
+with tb1 as (
+  select 
+  format_date('%Y-%m', o.created_at) as Month,
+  extract(year from o.created_at) as Year,
+  o_i.sale_price as oi_sp, o_i.order_id as oi_or, o_i.product_id as pro_i
+  from bigquery-public-data.thelook_ecommerce.orders as o
+  join bigquery-public-data.thelook_ecommerce.order_items as o_i
+  on o.order_id = o_i.order_id and o.user_id = o_i.user_id
+  order by 1, 2
+),
+tb2 as(
+  select
+  p.category as Product_category, p.cost as p_cost, o_i.product_id as pro_i
+  from bigquery-public-data.thelook_ecommerce.products as p
+  join bigquery-public-data.thelook_ecommerce.order_items as o_i
+  on p.id = o_i.product_id
+),
+tb3 as(
+select
+tb1.Month as month1, tb1.Year as year, tb2.Product_category as product_category,
+sum(tb1.oi_sp) as TPV, count(tb1.oi_or) as TPO,
+round(100.00* (lead(sum(tb1.oi_sp), 1, 0) over(order by tb1.Month) - sum(tb1.oi_sp))/sum(tb1.oi_sp), 2)||'%' as Revenue_growth,
+round(100.00* (lead(count(tb1.oi_or), 1, 0) over(order by tb1.Month) - count(tb1.oi_or))/count(tb1.oi_or), 2)||'%' as Order_growth,
+sum(tb2.p_cost) as Total_cost,
+sum(tb1.oi_sp) - sum(tb2.p_cost) as Total_profit,
+sum(tb1.oi_sp) - sum(tb2.p_cost)/sum(tb2.p_cost) as Profit_to_cost_ratio
+from tb1 join tb2
+on tb1.pro_i = tb2.pro_i
+group by 1
+)
+, ecommerce_index as(
+  select *, 
+  (extract ('year' from month1) - extract('year' from first_purchase))*12 + (extract('month' from month1) - extract('month' from first_purchase)) + 1 as index
+  from (select *, min(month) over(partition by product_category) as first_purchase
+  from tb3) a
+),
+yyy as(
+  month1, index, TPV
+  from ecommerce_index
+  group by month1, index 
+)
+select
+month1,
+sum(case when index = 1 then TPV else 0 end) as 'T1',
+sum(case when index = 2 then TPV else 0 end) as 'T2',
+sum(case when index = 3 then TPV else 0 end) as 'T3',
+sum(case when index = 4 then TPV else 0 end) as 'T4'
+from yyy
+group by month1
+order by month1

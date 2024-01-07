@@ -1,0 +1,80 @@
+--yc1
+select
+productline, year_id, dealsize,
+sum(sales) as revenue
+from sales_dataset_rfm_prj
+group by productline, year_id, dealsize
+order by year_id
+--yc2
+with chon as(
+select month_id, year_id, sum(sales) as revenue
+from sales_dataset_rfm_prj
+group by year_id, month_id
+),
+loc as (
+select month_id, year_id, revenue,
+row_number() over(partition by year_id order by revenue desc) as order_number
+from chon)
+select month_id, year_id, revenue
+from loc	
+where order_number = 1
+order by year_id
+--yc3
+with loc as(
+select productline,
+sum(sales) as revenue
+from sales_dataset_rfm_prj
+where month_id = 11
+group by productline
+),
+chon as(
+select productline, revenue,
+row_number() over(order by revenue desc) as order_number
+from loc
+)
+select productline, revenue, order_number
+from chon
+where order_number <= 3
+--yc4
+with loc as(
+select year_id, productline, sum(sales) as revenue, country
+from sales_dataset_rfm_prj
+where country = 'UK'
+group by 1, 2, country
+),
+chon as(
+select year_id, productline, revenue,
+row_number() over(partition by year_id order by revenue desc) as rank_
+from loc
+)
+select 
+year_id, productline, revenue, rank_
+from chon
+where rank_ = 1
+--yc5
+with customer_rfm as (
+select ordernumber, 
+current_date - MAX(orderdate) as r,
+count(distinct ordernumber) as f,
+sum(sales) as m_
+from sales_dataset_rfm_prj
+group by ordernumber
+),
+rfm_score as(
+select ordernumber,
+ntile(5) over(order by r desc) as r_score,
+ntile(5) over(order by f) as f_score,
+ntile(5) over(order by m_) as m_score
+from customer_rfm
+),
+rfm_final as(
+select 
+ordernumber,
+cast(r_score as varchar)||cast(f_score as varchar)||cast(m_score as varchar) as rfm_score2
+from rfm_score
+)
+select distinct sales_dataset_rfm_prj.customername
+from rfm_final 
+join sales_dataset_rfm_prj
+on rfm_final.ordernumber = sales_dataset_rfm_prj.ordernumber
+where rfm_score2 = '555'
